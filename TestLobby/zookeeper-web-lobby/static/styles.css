@@ -1,0 +1,21 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+}
+
+#lobby {
+    margin: auto;
+    width: 300px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    text-align: center;
+}
+
+input[type="text"] {
+    width: 90%;
+    margin-bottom: 10px;
+}
+
+#users {
+    margin-top: 20px;
+}
