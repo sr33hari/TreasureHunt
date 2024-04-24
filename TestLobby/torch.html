@@ -3,22 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torchlight Cursor Effect with Clues</title>
+    <title>Torchlight Cursor Effect</title>
     <style>
         body, html {
             height: 100%;
             margin: 0;
             overflow: hidden;
-            background: black; /* Ensure the body has a black background */
-            cursor: none; /* Hide the cursor */
+            background: black;
+            cursor: none;
+        }
+        #mask {
+            position: fixed;
+            pointer-events: none;
+            border-radius: 50%;
+            width: 400px; 
+            height: 300px;
+            background-color: black;
+            mix-blend-mode: exclusion;
+            display: none; 
         }
         #container {
             width: 100%;
             height: 100%;
             background: url("crimebg.jpeg") no-repeat center center;
-            background-size: cover; /* Adjusted to cover */
+            background-size: contain; 
             position: relative;
-            cursor: none; /* Hide the cursor also specifically over the container */
         }
         #overlay {
             position: absolute;
@@ -26,28 +35,14 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.85); /* Dark overlay to simulate the torch effect */
-            pointer-events: none; /* Allow events to pass through */
-            cursor: none; /* Hide the cursor over the overlay */
+            background-color: rgba(0, 0, 0, 0.95); 
+            pointer-events: none; 
         }
-        .clue {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background-color: red; /* Visible when under the torchlight */
-            border-radius: 50%;
-            cursor: pointer;
-            display: none; /* Start hidden and show under the torch */
-        }
-        #clue1 { top: 20%; left: 30%; }
-        #clue2 { top: 50%; left: 60%; }
     </style>
 </head>
 <body>
     <div id="container">
         <div id="overlay"></div>
-        <button id="clue1" class="clue" onclick="foundClue()"></button>
-        <button id="clue2" class="clue" onclick="foundClue()"></button>
         <div id="mask"></div>
     </div>
     <script>
@@ -55,35 +50,19 @@
         const mask = document.getElementById('mask');
         const overlay = document.getElementById('overlay');
 
-        function foundClue() {
-            alert("Clue Found!");
-        }
-
         container.addEventListener('mousemove', function(e) {
-            mask.style.display = 'block'; // Show the mask
-            mask.style.left = e.pageX - 100 + 'px'; // Center the mask on the cursor
-            mask.style.top = e.pageY - 100 + 'px'; // Center the mask on the cursor
+            mask.style.display = 'block';
+            mask.style.left = e.pageX - 100 + 'px';
+            mask.style.top = e.pageY - 100 + 'px'; 
             overlay.style['mask-image'] = `radial-gradient(circle 100px at ${e.pageX}px ${e.pageY}px, transparent 0, black 100px)`;
             overlay.style['-webkit-mask-image'] = `radial-gradient(circle 100px at ${e.pageX}px ${e.pageY}px, transparent 0, black 100px)`;
-
-            // Dynamically show buttons when within the lighted area
-            document.querySelectorAll('.clue').forEach(clue => {
-                const rect = clue.getBoundingClientRect();
-                const dist = Math.sqrt(Math.pow(rect.left + rect.width/2 - e.pageX, 2) + Math.pow(rect.top + rect.height/2 - e.pageY, 2));
-                if (dist < 100) {
-                    clue.style.display = 'block';
-                } else {
-                    clue.style.display = 'none';
-                }
-            });
         });
 
         container.addEventListener('mouseleave', function() {
-            mask.style.display = 'none'; // Hide the mask when the cursor leaves the container
+            mask.style.display = 'none'; 
             overlay.style['mask-image'] = '';
             overlay.style['-webkit-mask-image'] = '';
-            document.querySelectorAll('.clue').forEach(clue => clue.style.display = 'none'); // Hide clues
         });
-    </scriptt>
+    </script>
 </body>
 </html>
