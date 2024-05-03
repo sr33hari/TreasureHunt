@@ -8,10 +8,32 @@ window.onload = function() {
 };
 
 function userReady() {
-    const username = localStorage.getItem('username'); // retrieve the username
-    fetch(`/api/userReady?username=${username}`)
+    const username = localStorage.getItem('username');
+    fetch('/setReady', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'username=' + encodeURIComponent(username)
+    }).then(response => response.json())
+      .then(data => {
+          console.log(data);
+          if (localStorage.getItem('isLeader') === 'true') {
+              checkAllReady();
+          }
+      });
+}
+
+function checkAllReady() {
+    fetch('/checkReady')
         .then(response => response.json())
-        .then(data => console.log(data));
+        .then(data => {
+            alert(data.message);
+            if (data.message === 'All users ready, entering game now') {
+                // Redirect to torch.html
+                window.location.href = 'torch.html';
+            }
+        });
 }
 
 function fetchLobbyUsers() {

@@ -10,12 +10,13 @@ function joinLobby() {
       .then(data => {
           alert(data.message);
           if (data.status === 'success') {
-            localStorage.setItem('username', username); // store the username in local storage
+            localStorage.setItem('username', username); // Store the username in local storage
+            localStorage.setItem('isLeader', data.isLeader); // Store leader status
             window.location.href = 'lobby.html';
-            // fetchLobbyUsers();
           }
       });
 }
+
 
 // function fetchLobbyUsers() {
 //     fetch('/lobby')
