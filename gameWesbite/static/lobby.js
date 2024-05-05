@@ -1,3 +1,11 @@
+var socket = io.connect('http://0.0.0.0:6190');
+socket.on('start game', function(data) {
+    alert('Game is starting now!')
+    window.location.href = data.url;
+});
+
+
+
 window.onload = function() {
     fetch('/lobby')
         .then(response => response.json())
@@ -28,10 +36,9 @@ function checkAllReady() {
     fetch('/checkReady')
         .then(response => response.json())
         .then(data => {
-            alert(data.message);
-            if (data.message === 'All users ready, entering game now') {
-                // Redirect to torch.html
-                window.location.href = 'torch.html';
+            console.log("Leader is checking if all users are ready");
+            if (data.message === 'All users are ready, entering game now') {
+                console.log("All users are ready, starting game now");
             }
         });
 }
