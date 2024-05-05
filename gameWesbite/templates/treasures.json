@@ -1,0 +1,32 @@
+[
+    {
+        "question": "Click on the first thing that makes it look like a crime?",
+        "x": 58,
+        "y": 52
+    },
+    {
+        "question": "Which thing suggests it's a Crime of Passion?",
+        "x": 90,
+        "y": 10
+    },
+    {
+        "question": "Find the thing that can tell the time of struggle?",
+        "x": 10,
+        "y": 45
+    },
+    {
+        "question": "Which of these things can have DNA evidence on them?",
+        "x": 73,
+        "y": 25
+    },
+    {
+        "question": "Find the strangest thing that shines out?",
+        "x": 29,
+        "y": 90
+    },
+    {
+        "question": "",
+        "x": 0,
+        "y": 0
+    }
+]

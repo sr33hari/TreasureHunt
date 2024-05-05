@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torchlight Cursor Effect</title>
+    <title>Game Page</title>
     <style>
         body, html {
             height: 100%;
@@ -38,31 +38,39 @@
             background-color: rgba(0, 0, 0, 0.95); 
             pointer-events: none; 
         }
+        #question {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+            z-index: 100;
+        }
+        .button {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            background-color: transparent; /* Set background color to transparent */
+            color: transparent; /* Make text color transparent */
+            padding: 40px 40px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="container">
         <div id="overlay"></div>
         <div id="mask"></div>
+        <div id="question">Click on the first thing that makes it look like a crime?</div>
+        <button class="button" id="btn1" onClick="treasureFound()" style="top: 58%; left: 52%;"></button>
+
     </div>
-    <script>
-        const container = document.getElementById('container');
-        const mask = document.getElementById('mask');
-        const overlay = document.getElementById('overlay');
-
-        container.addEventListener('mousemove', function(e) {
-            mask.style.display = 'block';
-            mask.style.left = e.pageX - 100 + 'px';
-            mask.style.top = e.pageY - 100 + 'px'; 
-            overlay.style['mask-image'] = `radial-gradient(circle 100px at ${e.pageX}px ${e.pageY}px, transparent 0, black 100px)`;
-            overlay.style['-webkit-mask-image'] = `radial-gradient(circle 100px at ${e.pageX}px ${e.pageY}px, transparent 0, black 100px)`;
-        });
-
-        container.addEventListener('mouseleave', function() {
-            mask.style.display = 'none'; 
-            overlay.style['mask-image'] = '';
-            overlay.style['-webkit-mask-image'] = '';
-        });
-    </script>
+    <script src="../static/torch.js"></script>
 </body>
 </html>

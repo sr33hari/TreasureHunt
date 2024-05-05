@@ -7,7 +7,7 @@ import time
 app = Flask(__name__)
 
 # Connect to Zookeeper
-zk_hosts = '10.250.157.252:2181'  # Use your actual Zookeeper host IP
+zk_hosts = '172.16.57.233:2181'  # Use your actual Zookeeper host IP
 zk = KazooClient(hosts=zk_hosts)
 zk.start()
 
@@ -93,6 +93,19 @@ def check_ready():
     if all_ready:
         return jsonify({'message': 'All users ready, entering game now'})
     return jsonify({'message': 'Waiting for all users to be ready'})
+
+@app.route('/treasures/timestamp', methods=['POST'])
+def receive_timestamp():
+    data = request.json
+    timestamp = data.get('timestamp')
+
+    # Here you can process the timestamp as needed
+    # For example, you can save it to a database, perform further processing, etc.
+    print("Received timestamp:", timestamp)
+
+    # Optionally, you can send a response back to the frontend
+    response = {'message': 'Timestamp received successfully'}
+    return jsonify(response), 200
 
 
 if __name__ == '__main__':
