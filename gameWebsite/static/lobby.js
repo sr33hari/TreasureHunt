@@ -1,9 +1,8 @@
-var socket = io.connect('http://0.0.0.0:6190');
+var socket = io.connect(window.location.origin);
 socket.on('start game', function(data) {
     alert('Game is starting now!')
     window.location.href = data.url;
 });
-
 
 
 window.onload = function() {
