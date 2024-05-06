@@ -206,4 +206,6 @@ def ensure_single_leader():
 threading.Thread(target=ensure_single_leader, daemon=True).start()
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=6190)
+    # socketio.run(app, debug=True)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5004)
+

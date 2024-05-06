@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  game1:
+    container_name: game1
+    image: game1
+    build: ./gameWebsite
+    environment:
+      - FLASK_RUN_PORT=5001
+    ports:
+      - "5001:5001"
+    networks:
+      - game
+  game2:
+    container_name: game2
+    image: game2
+    build: ./gameWebsite
+    environment:
+      - FLASK_RUN_PORT=5002
+    ports:
+      - "5002:5002"
+    networks:
+      - game
+  game3:
+    container_name: game3
+    image: game3
+    build: ./gameWebsite
+    environment:
+      - FLASK_RUN_PORT=5003
+    ports:
+      - "5003:5003"
+    networks:
+      - game
+  game4:
+    container_name: game4
+    image: game4
+    build: ./gameWebsite
+    environment:
+      - FLASK_RUN_PORT=5004
+    ports:
+      - "5004:5004"
+    networks:
+      - game
+  game5:
+    container_name: game5
+    image: game5
+    build: ./gameWebsite
+    environment:
+      - FLASK_RUN_PORT=5005
+    ports:
+      - "5005:5005"
+    networks:
+      - game
+
+networks:
+  game:
+
