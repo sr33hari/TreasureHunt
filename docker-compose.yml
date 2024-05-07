@@ -31,26 +31,26 @@ services:
       - "5003:5003"
     networks:
       - game
-  game4:
-    container_name: game4
-    image: game4
-    build: ./gameWebsite
-    environment:
-      - FLASK_RUN_PORT=5004
-    ports:
-      - "5004:5004"
-    networks:
-      - game
-  game5:
-    container_name: game5
-    image: game5
-    build: ./gameWebsite
-    environment:
-      - FLASK_RUN_PORT=5005
-    ports:
-      - "5005:5005"
-    networks:
-      - game
+  # game4:
+  #   container_name: game4
+  #   image: game4
+  #   build: ./gameWebsite
+  #   environment:
+  #     - FLASK_RUN_PORT=5004
+  #   ports:
+  #     - "5004:5004"
+  #   networks:
+  #     - game
+  # game5:
+  #   container_name: game5
+  #   image: game5
+  #   build: ./gameWebsite
+  #   environment:
+  #     - FLASK_RUN_PORT=5005
+  #   ports:
+  #     - "5005:5005"
+  #   networks:
+  #     - game
 
 networks:
   game:

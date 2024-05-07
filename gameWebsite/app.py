@@ -37,6 +37,7 @@ def join():
     'timestampClue': 0,
     'score': 0,
     'gameStarted': False,
+    'leaderStartsGame': False,
     'isRoundOver': False,
     'roundCounter': 0
 }
@@ -88,33 +89,34 @@ def set_ready():
 
 @app.route('/checkReady', methods=['GET'])
 def check_ready():
-    max_attempts = 20
-    attempts = 0
-    while attempts < max_attempts:
-        children = zk.get_children(lobby_path)
-        all_ready = True
-        for child in children:
-            data, _ = zk.get(f"{lobby_path}/{child}")
-            if not json.loads(data.decode())['isReady']:
-                all_ready = False
-                break
-        if all_ready:
-            #get the user data and set the gameStarted flag to True
+    try:
+        max_attempts = 20
+        attempts = 0
+        while attempts < max_attempts:
+            children = zk.get_children(lobby_path)
+            all_ready = True
             for child in children:
                 data, _ = zk.get(f"{lobby_path}/{child}")
-                user_data = json.loads(data.decode())
-                user_data['gameStarted'] = True
-                user_data['roundCounter'] += 1
-                zk.set(f"{lobby_path}/{child}", json.dumps(user_data).encode())
-
-                #emit the start game event to all users
-                socketio.emit('start game', {'url': 'torch.html'})
-
-            return jsonify({'message': 'All users ready, entering game now'})
-        time.sleep(1)  # wait for 1 second before checking again
-        attempts += 1
-    return jsonify({'message': 'Waiting for all users to be ready'})
-
+                if not json.loads(data.decode())['isReady']:
+                    all_ready = False
+                    break
+            if all_ready:
+                for child in children:
+                    data, _ = zk.get(f"{lobby_path}/{child}", watcher)
+                    user_data = json.loads(data.decode())
+                    user_data['gameStarted'] = True
+                    user_data['roundCounter'] += 1
+                    if user_data['isLeader']:
+                        user_data['leaderStartsGame'] = True
+                    zk.set(f"{lobby_path}/{child}", json.dumps(user_data).encode())
+                return jsonify({'message': 'All users ready, entering game now'})
+            time.sleep(1)
+            attempts += 1
+        # return jsonify({'message': 'Waiting for all users to be ready'})
+    except Exception as e:
+        app.logger.error(f"An error occurred: {e}")
+        return jsonify({'message': 'An error occurred'}), 500
+    
 @app.route('/api/treasureFound', methods=['POST'])
 def treasure_found():
     username = request.form['username']
@@ -181,14 +183,6 @@ def ensure_single_leader():
                 new_data['isLeader'] = True
                 zk.set(f"{lobby_path}/{new_leader}", json.dumps(new_data).encode())
 
-            #If there are two users in the lobby, set the isLastRound flag to True
-            if len(children) == 2:
-                for child in children:
-                    data, _ = zk.get(f"{lobby_path}/{child}")
-                    user_data = json.loads(data.decode())
-                    user_data['isLastRound'] = True
-                    zk.set(f"{lobby_path}/{child}", json.dumps(user_data).encode())
-                
             #check if username is not empty string:
             if username != '':
                 data, _ = zk.get(f"{lobby_path}/{username}")
@@ -201,6 +195,20 @@ def ensure_single_leader():
             app.logger.error(f"Error ensuring leader: {str(e)}")
             traceback.print_exc()
         time.sleep(10)  # Check every 10 seconds
+
+def watcher(event):
+    children = zk.get_children(lobby_path, watcher)
+    #iterate through the children and check if the gameStarted flag is set to True
+    #log the event evertime it is triggered
+    app.logger.info(f"Event inside the watcher: {event}")
+    for child in children:
+        data, _ = zk.get(f"{lobby_path}/{child}")
+        user_data = json.loads(data.decode())
+        if user_data['gameStarted']:
+            socketio.emit('start game', {'url': 'torch.html'})
+            
+    app.logger.info(f"Game started: {event}")
+
 
 # Start the background thread to ensure there is always a single leader
 threading.Thread(target=ensure_single_leader, daemon=True).start()
