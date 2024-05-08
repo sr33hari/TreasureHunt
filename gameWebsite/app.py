@@ -1,14 +1,21 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from kazoo.client import KazooClient
+# from kazoo.recipe.watchers import ChildrenWatch
+# from kazoo.recipe.watchers import DataWatch
 from pydantic import BaseModel
 from flask_socketio import SocketIO, emit
 import json
 import threading
 import traceback
 import time
+import logging
+import sys
 
 app = Flask(__name__)
 socketio = SocketIO(app)
+
+app.logger.addHandler(logging.StreamHandler(sys.stdout))
+app.logger.setLevel(logging.DEBUG)
 
 # Connect to Zookeeper
 zk_hosts = '10.0.0.13:2181'  # Use your actual Zookeeper host IP
@@ -22,6 +29,7 @@ if not zk.exists(lobby_path):
 
 #create a global variable for username to store
 username = ''
+user_sockets = {}
 
 
 @app.route('/')
@@ -39,7 +47,8 @@ def join():
     'gameStarted': False,
     'leaderStartsGame': False,
     'isRoundOver': False,
-    'roundCounter': 0
+    'roundCounter': 0,
+    'username': ''
 }
     #set the global variable username to the username entered by the user
     global username
@@ -51,8 +60,11 @@ def join():
         is_leader = len(children) == 0  # First user to join becomes the leader
         user_data['isLeader'] = is_leader
         user_data['isReady'] = False
+        user_data['username'] = username
         user_data = json.dumps(user_data)
+        
         zk.create(user_path, user_data.encode(), ephemeral=True)
+        zk.DataWatch(user_path, watch_children)
         return jsonify({'status': 'success', 'message': 'You have joined the lobby!', 'isLeader': is_leader})
     else:
         return jsonify({'status': 'error', 'message': 'Username already in use'})
@@ -89,26 +101,33 @@ def set_ready():
 
 @app.route('/checkReady', methods=['GET'])
 def check_ready():
+    # print("Checking if all users are ready\n\n\n")
     try:
         max_attempts = 20
         attempts = 0
         while attempts < max_attempts:
+            print("Checking if all users are ready\n\n\n")
+            print(f"Attempt {attempts}\n\n")
             children = zk.get_children(lobby_path)
             all_ready = True
             for child in children:
                 data, _ = zk.get(f"{lobby_path}/{child}")
                 if not json.loads(data.decode())['isReady']:
                     all_ready = False
-                    break
             if all_ready:
+                print("All users ready, entering game now\n\n\n")
                 for child in children:
-                    data, _ = zk.get(f"{lobby_path}/{child}", watcher)
+                    data, _ = zk.get(f"{lobby_path}/{child}", watch=watch_children )
                     user_data = json.loads(data.decode())
                     user_data['gameStarted'] = True
                     user_data['roundCounter'] += 1
                     if user_data['isLeader']:
                         user_data['leaderStartsGame'] = True
-                    zk.set(f"{lobby_path}/{child}", json.dumps(user_data).encode())
+                    zk.set(f"{lobby_path}/{child}", json.dumps(user_data).encode(),)
+                    childpath = f"{lobby_path}/{child}"
+                    # watch_children(childpath, None, None)
+                # pass the stat argument to the watch_children function
+                # watch_children(children, None)
                 return jsonify({'message': 'All users ready, entering game now'})
             time.sleep(1)
             attempts += 1
@@ -196,22 +215,47 @@ def ensure_single_leader():
             traceback.print_exc()
         time.sleep(10)  # Check every 10 seconds
 
-def watcher(event):
-    children = zk.get_children(lobby_path, watcher)
-    #iterate through the children and check if the gameStarted flag is set to True
-    #log the event evertime it is triggered
-    app.logger.info(f"Event inside the watcher: {event}")
-    for child in children:
-        data, _ = zk.get(f"{lobby_path}/{child}")
+@zk.DataWatch(lobby_path)
+def watch_children(data, stat, event):
+    if data is None:
+        # Node has been deleted
+        app.logger.info("Node has been deleted.")
+        return
+    
+    app.logger.info(f"Child data changed: {data}")
+    try:
         user_data = json.loads(data.decode())
-        if user_data['gameStarted']:
+        if user_data.get('gameStarted', False):
             socketio.emit('start game', {'url': 'torch.html'})
-            
-    app.logger.info(f"Game started: {event}")
+            app.logger.info(f"Game started: {user_data}")
+    except Exception as e:
+        app.logger.error(f"Error handling data change: {e}")
 
+
+@zk.ChildrenWatch(lobby_path)
+def ensure_leader_exists(children):
+    app.logger.info(f"Children changed: {children}")
+
+    if not children:
+        return  # No children, no action needed
+    leader_exists = any(json.loads(zk.get(f"{lobby_path}/{child}")[0].decode())['isLeader'] for child in children)
+    if not leader_exists:
+        # Choose new leader, e.g., the first child or based on some criteria
+        new_leader = children[0]  # Simplified example, choose as needed
+        data, _ = zk.get(f"{lobby_path}/{new_leader}")
+        user_data = json.loads(data.decode())
+        user_data['isLeader'] = True
+        zk.set(f"{lobby_path}/{new_leader}", json.dumps(user_data).encode())
+        app.logger.info(f"New leader assigned: {new_leader}")
+
+# @zk.DataWatch(lobby_path)
+# def watch_data(data, stat):
+#     print(f"Data changed: {data}")
+#     app.logger.info(f"Data changed: {data}")
+#     socketio.emit('start game', {'url': 'torch.html'})
 
 # Start the background thread to ensure there is always a single leader
-threading.Thread(target=ensure_single_leader, daemon=True).start()
+# threading.Thread(target=ensure_single_leader, daemon=True).start()
 
 if __name__ == '__main__':
     # socketio.run(app, debug=True)
