@@ -150,6 +150,17 @@ def treasure_found():
     zk.set(user_path, json.dumps(user_data).encode())
     return jsonify({'status': 'success', 'message': f'{username} found the treasure!'})
 
+@app.route('/scores', methods=['GET'])
+def get_scores():
+    children = zk.get_children(lobby_path)
+    scores = {}
+    for child in children:
+        data, _ = zk.get(f"{lobby_path}/{child}")
+        user_data = json.loads(data.decode())
+        scores[child] = user_data['score']
+    return jsonify(scores)
+    # return jsonify(exampleJSON)
+
 
 def compute_scores():
     while True:

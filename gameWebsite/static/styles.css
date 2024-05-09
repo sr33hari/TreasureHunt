@@ -10,6 +10,7 @@ body {
     justify-content: center;
     align-items: center;
     position: relative;
+    /* color: white; */
 }
 
 #lobby {
@@ -23,6 +24,31 @@ body {
     left: 54%;
     transform: translate(-50%, -50%);
     background-color: rgba(255, 255, 255, 0.8); /* white background with 80% opacity */
+}
+
+#scoresTable {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 10px;
+    background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+    padding: 10px;
+    border-radius: 5px; /* Rounded corners */
+    color: white;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse; /* Ensures that the table borders are neatly displayed */
+}
+
+table, th, td {
+    border: 1px solid white; /* White borders for table cells */
+}
+
+th, td {
+    padding: 8px;
+    text-align: left; /* Aligning text to the left for table headers and cells */
 }
 
 input[type="text"] {
