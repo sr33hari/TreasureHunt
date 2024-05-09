@@ -2,6 +2,7 @@ window.onload = function () {
     fetchScores();
     //ensure the function is called every 10 seconds
     setInterval(fetchScores, 10000);
+    setTimeout(removeUsers, 15000);
 }
 
 function fetchScores() {
@@ -22,5 +23,15 @@ function fetchScores() {
             var winner = Object.keys(data).reduce((a, b) => data[a] > data[b] ? a : b);
             var winnername = document.getElementById("winnerName");
             winnername.textContent = winner;
+        });
+}
+
+function removeUsers() {
+    fetch('/removeUsers')
+        .then(response => response.json())
+        .then(data => {
+            alert("All users have been removed from the lobby!")
+            console.log(data);
+            window.location.href = '/';
         });
 }
