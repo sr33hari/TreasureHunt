@@ -7,7 +7,7 @@ socket.on('start game', function(data) {
 
 window.onload = function() {
     fetchLobbyUsers();
-    fetchScores(); // Call this function to load scores when the page loads
+    // fetchScores(); // Call this function to load scores when the page loads
 };
 
 function userReady() {
@@ -47,18 +47,4 @@ function fetchLobbyUsers() {
         });
 }
 
-function fetchScores() {
-    fetch('/scores')
-        .then(response => response.json())
-        .then(data => {
-            const scoresDiv = document.getElementById('scoresTable');
-            let html = '<h3>User Scores:</h3>';
-            html += '<table>';
-            html += '<tr><th>User</th><th>Score</th></tr>';
-            for (const user in data) {
-                html += `<tr><td>${user}</td><td>${data[user]}</td></tr>`;
-            }
-            html += '</table>';
-            scoresDiv.innerHTML = html;
-        });
-}
+

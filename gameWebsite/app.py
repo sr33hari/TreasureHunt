@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from kazoo.client import KazooClient
-from pydantic import BaseModel
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import json
 import time
 import logging
@@ -44,7 +43,8 @@ def join():
     'gameStarted': False,
     'isRoundOver': False,
     'roundCounter': 0,
-    'username': ''
+    'username': '',
+    'clueFinders': "",
 }
     #set the global variable username to the username entered by the user
     global username
@@ -77,6 +77,10 @@ def serve_lobby():
 @app.route('/torch.html')
 def serve_torch():
     return send_from_directory('templates', 'torch.html')
+
+@app.route('/gameOver.html')
+def serve_gameOver():
+    return send_from_directory('templates', 'gameOver.html')
 
 @app.route('/setReady', methods=['POST'])
 def set_ready():
@@ -127,16 +131,37 @@ def treasure_found():
     user_path = f"{lobby_path}/{username}"
     user_data = json.loads(zk.get(user_path)[0].decode())
     user_data['timestampClue'] = int(time.time())
-    user_data['isRoundOver'] = True
-    user_data['isReady'] = False
-    user_data['gameStarted'] = False
-    socketio.emit('treasure updates', {'message': f'{username} found the treasure!'})
+    user_data['roundCounter'] += 1
+    isLeader = user_data['isLeader']
+    # app.logger.info(f"User {username} found the treasure at {user_data['timestampClue']}\n\n\n")
+    # user_data['isRoundOver'] = True
+    # user_data['isReady'] = False
+    # user_data['gameStarted'] = False
+    # socketio.emit('treasure updates', {'message': f'{username} found the treasure!'})
     # socketio.emit('round over', {'url':'lobby.html'})
+    children = zk.get_children(lobby_path)
+    for child in children:
+        data, _ = zk.get(f"{lobby_path}/{child}")
+        other_users_data = json.loads(data.decode())
+        if other_users_data['username'] == username:
+            pass
+        else:
+            other_users_data['clueFinders'] = username
+            zk.set(f"{lobby_path}/{child}", json.dumps(other_users_data).encode())
+    time.sleep(0.2)
     zk.set(user_path, json.dumps(user_data).encode())
+    if isLeader:
+        compute_scores()
     return jsonify({'status': 'success', 'message': f'{username} found the treasure! \n\n'})
 
 @app.route('/scores', methods=['GET'])
 def get_scores():
+    # exampleJSON = {
+    #     'user1': 1000,
+    #     'user2': 900,
+    #     'user3': 800,
+    # }
+    time.sleep(2)
     children = zk.get_children(lobby_path)
     scores = {}
     for child in children:
@@ -157,12 +182,16 @@ def watch_children(data, stat, event):
         app.logger.info("Node has been deleted.")
         return
     
-    app.logger.info(f"Child data changed: {data}")
+    # app.logger.info(f"Child data changed: {data}")
     try:
+        app.logger.info(f"{username} data update \n.{data}\n")
         user_data = json.loads(data.decode())
-        if user_data.get('gameStarted', False):
+        if user_data['gameStarted'] and user_data['roundCounter'] == 1:
             socketio.emit('start game', {'url': 'torch.html'})
-            app.logger.info(f"Game started: {user_data}")
+            # app.logger.info(f"Game started: {user_data}")
+        if user_data['clueFinders'] != "":
+            socketio.emit('treasure updates', {'message': f'{user_data["clueFinders"]} found the treasure!'})
+            # app.logger.info(f"Clue finders broadcast: {user_data}")
     except Exception as e:
         app.logger.error(f"Error handling data change: {e}")
 
@@ -188,37 +217,42 @@ def ensure_leader_exists(children):
         app.logger.info(f"New leader assigned: {new_leader}")
 
 def compute_scores():
-    while True:
-        try:
+    #TODO change the leader after every round
+    app.logger.info("Computing scores\n\n")
+    try:
+        max_attempts = 20
+        attempts = 0
+        while attempts < max_attempts:
             children = zk.get_children(lobby_path)
             # Check if any child has a timestampClue of 0
-            for child in children:
-                data, _ = zk.get(f"{lobby_path}/{child}")
-                timestampClue = json.loads(data.decode())['timestampClue']
-                app.logger.info(f"Data from the player {child} is {data.decode()}")
-                if timestampClue == 0:
-                    app.logger.info("Exiting: Not all players have found the clue.")
-                    return  # Exit the function if any child has not found the clue
-
-            # If all children have found the clue, proceed to compute scores
+            all_done = True
             child_data = {}
             for child in children:
                 data, _ = zk.get(f"{lobby_path}/{child}")
                 decoded_data = json.loads(data.decode())
                 child_data[child] = decoded_data
+                timestampClue = decoded_data['timestampClue']
+                app.logger.info(f"Data from the player {child} is {data.decode()}")
+                if timestampClue == 0:
+                    app.logger.info("Exiting: Not all players have found the clue.")
+                    all_done=False  # Exit the function if any child has not found the clue
 
-            timestamps = [data['timestampClue'] for data in child_data.values()]
-            earliest_timestamp = min(timestamps)
+            if all_done:
+                # If all children have found the clue, proceed to compute score
+                timestamps = [data['timestampClue'] for data in child_data.values()]
+                earliest_timestamp = min(timestamps)
 
-            # Calculate and set scores
-            for child, data in child_data.items():
-                time_difference = data['timestampClue'] - earliest_timestamp
-                data['score'] = max(1000 - time_difference, 0)
-                zk.set(f"{lobby_path}/{child}", json.dumps(data).encode())
+                # Calculate and set scores
+                for child, data in child_data.items():
+                    time_difference = data['timestampClue'] - earliest_timestamp
+                    data['score'] = max(1000 - time_difference, 0)
+                    zk.set(f"{lobby_path}/{child}", json.dumps(data).encode())
+            
+            time.sleep(1)
+            attempts += 1
 
-        except Exception as e:
-            app.logger.error(f"Error computing scores: {str(e)}")
-            break  # Consider what to do in case of an exception, possibly continue or exit based on your use case
+    except Exception as e:
+        app.logger.error(f"Error computing scores: {str(e)}")
 
 
 def ensure_single_leader():
@@ -244,7 +278,6 @@ def ensure_single_leader():
                 json_data = json.loads(data.decode())
                 if json_data['isLeader']:
                     compute_scores() #have this function return the results of the game, if the respinse is valid then update the score board and start a new round.
-            
             
         except Exception as e:
             app.logger.error(f"Error ensuring leader: {str(e)}")

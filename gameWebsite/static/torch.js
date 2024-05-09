@@ -1,14 +1,8 @@
 var socket = io.connect(window.location.origin);
 
-socket.on('round over', function(data) {
-    alert('You have found the treasure!')
-    window.location.href = data.url;
-});
-
 socket.on('treasure updates', function(data) {
-    alert(data.message);
+    showNotification(data.message);
 });
-
 
 function treasureFound() {
     const username = localStorage.getItem('username');
@@ -54,47 +48,25 @@ var treasures = [
         "x": 90,
         "y": 10
     },
-    {
-        "question": "Find the thing that can tell the time of struggle?",
-        "x": 10,
-        "y": 45
-    },
-    {
-        "question": "Which of these things can have DNA evidence on them?",
-        "x": 73,
-        "y": 25
-    },
-    {
-        "question": "Find the strangest thing that shines out?",
-        "x": 29,
-        "y": 90
-    }
+    // {
+    //     "question": "Find the thing that can tell the time of struggle?",
+    //     "x": 10,
+    //     "y": 45
+    // },
+    // {
+    //     "question": "Which of these things can have DNA evidence on them?",
+    //     "x": 73,
+    //     "y": 25
+    // },
+    // {
+    //     "question": "Find the strangest thing that shines out?",
+    //     "x": 29,
+    //     "y": 90
+    // }
 ];
 
+
 function treasureFound() {
-    n++;
-
-    if (n >= treasures.length - 1) {
-        console.log("All treasures found!");
-        alert("You have found all the treasures!");
-        window.location.href = '/lobby';
-    }
-
-    // Display next question
-    var questionDiv = document.getElementById("question");
-    questionDiv.textContent = treasures[n].question;
-
-    // Set button's new position
-    var button = document.getElementById("btn1"); 
-    button.style.top = treasures[n].x + '%';
-    button.style.left = treasures[n].y + '%';
-    if (n == 1) button.style.padding = "100px 100px";
-    else button.style.padding = "50px 50px";
-
-    // Fetch timestamp
-    var timestamp = new Date().toLocaleString();
-    console.log("Treasure found at: " + timestamp);
-
     const username = localStorage.getItem('username');
     fetch('/api/treasureFound', {
         method: 'POST',
@@ -105,20 +77,33 @@ function treasureFound() {
     }).then(response => response.json())
       .then(data => {
           console.log(data);
+          if (n === treasures.length-1) {
+              showNotification("You have found all the treasures!");
+
+              window.location.href = '/gameOver.html';
+          } else {
+
+              n++;
+              // Display next question
+              var questionDiv = document.getElementById("question");
+              questionDiv.textContent = treasures[n].question;
+          
+              // Set button's new position
+              var button = document.getElementById("btn1"); 
+              button.style.top = treasures[n].x + '%';
+              button.style.left = treasures[n].y + '%';
+              if (n == 1) button.style.padding = "100px 100px";
+              else button.style.padding = "50px 50px";
+          }
       });
-    // // Call API to send timestamp
-    // fetch('/treasures/timestamp', {
-    //     method: 'POST', 
-    //     headers: {
-    //         'Content-Type': 'application/json'
-    //     },
-    //     body: JSON.stringify({ timestamp: timestamp })
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //     console.log('Timestamp sent:', data);
-    // })
-    // .catch((error) => {
-    //     console.error('Error sending timestamp:', error);
-    // });
+}
+
+
+function showNotification(message) {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.style.display = 'block'; // Show the notification
+    // setTimeout(() => {
+    //     notification.style.display = 'none'; // Hide after 3 seconds
+    // }, 3000);
 }
