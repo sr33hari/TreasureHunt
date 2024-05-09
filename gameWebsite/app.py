@@ -6,6 +6,7 @@ import time
 import logging
 import sys
 import traceback
+import threading
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -14,7 +15,7 @@ app.logger.addHandler(logging.StreamHandler(sys.stdout))
 app.logger.setLevel(logging.DEBUG)
 
 # Connect to Zookeeper
-zk_hosts = '172.16.57.246:2181'  # Use your actual Zookeeper host IP
+zk_hosts = '10.0.0.13:2181'  # Use your actual Zookeeper host IP
 zk = KazooClient(hosts=zk_hosts)
 zk.start()
 
@@ -25,8 +26,6 @@ if not zk.exists(lobby_path):
 
 #create a global variable for username to be stored
 username = ''
-user_sockets = {}
-
 
 @app.route('/')
 def index():
@@ -139,19 +138,21 @@ def treasure_found():
     # user_data['gameStarted'] = False
     # socketio.emit('treasure updates', {'message': f'{username} found the treasure!'})
     # socketio.emit('round over', {'url':'lobby.html'})
+    user_data['clueFinders'] = username
     children = zk.get_children(lobby_path)
     for child in children:
         data, _ = zk.get(f"{lobby_path}/{child}")
         other_users_data = json.loads(data.decode())
         if other_users_data['username'] == username:
+            
             pass
         else:
             other_users_data['clueFinders'] = username
             zk.set(f"{lobby_path}/{child}", json.dumps(other_users_data).encode())
-    time.sleep(0.2)
+    # time.sleep(0.2)
     zk.set(user_path, json.dumps(user_data).encode())
-    if isLeader:
-        compute_scores()
+    # if isLeader:
+    #     compute_scores()
     return jsonify({'status': 'success', 'message': f'{username} found the treasure! \n\n'})
 
 @app.route('/scores', methods=['GET'])
@@ -174,6 +175,13 @@ def get_scores():
 # @zk.DataWatch(lobby_path)
 # def broadcastTreasureUpdates(data, stat, event):
 #     )
+
+@app.route('/removeUsers', methods=['GET'])
+def remove_users():
+    children = zk.get_children(lobby_path)
+    for child in children:
+        zk.delete(f"{lobby_path}/{child}")
+    return jsonify({'status': 'success', 'message': 'All users removed'})
 
 @zk.DataWatch(lobby_path)
 def watch_children(data, stat, event):
@@ -210,7 +218,7 @@ def ensure_leader_exists(children):
             json_data.append(json.loads(data.decode()))
         #check for the user with the highest score and make him the leader 
         new_leader = max(json_data, key=lambda x: x['score'])
-        data, _ = zk.get(f"{lobby_path}/{new_leader}")
+        data, _ = zk.get(f"{lobby_path}/{new_leader['username']}")
         new_data = json.loads(data.decode())
         new_data['isLeader'] = True
         zk.set(f"{lobby_path}/{new_leader}", json.dumps(new_data).encode())
@@ -220,13 +228,15 @@ def compute_scores():
     #TODO change the leader after every round
     app.logger.info("Computing scores\n\n")
     try:
-        max_attempts = 20
+        max_attempts = 200000
         attempts = 0
         while attempts < max_attempts:
+            app.logger.info(f"Attempt {attempts}\n")
             children = zk.get_children(lobby_path)
             # Check if any child has a timestampClue of 0
-            all_done = True
+            all_done = False
             child_data = {}
+            countFound = 0
             for child in children:
                 data, _ = zk.get(f"{lobby_path}/{child}")
                 decoded_data = json.loads(data.decode())
@@ -236,6 +246,10 @@ def compute_scores():
                 if timestampClue == 0:
                     app.logger.info("Exiting: Not all players have found the clue.")
                     all_done=False  # Exit the function if any child has not found the clue
+                else:
+                    countFound += 1
+            if countFound == len(children) and countFound > 0:
+                all_done=True
 
             if all_done:
                 # If all children have found the clue, proceed to compute score
@@ -283,6 +297,8 @@ def ensure_single_leader():
             app.logger.error(f"Error ensuring leader: {str(e)}")
             traceback.print_exc()
         time.sleep(10)  # Check every 10 seconds
+
+threading.Thread(target=compute_scores, daemon=True).start()
 
 if __name__ == '__main__':
     # socketio.run(app, debug=True)

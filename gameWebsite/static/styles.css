@@ -59,3 +59,9 @@ input[type="text"] {
 #users {
     margin-top: 20px;
 }
+
+#winner {
+    margin-top: 50%;
+    text-align: center;
+    color: white;
+}
