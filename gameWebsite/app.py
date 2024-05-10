@@ -15,7 +15,7 @@ app.logger.addHandler(logging.StreamHandler(sys.stdout))
 app.logger.setLevel(logging.DEBUG)
 
 # Connect to Zookeeper
-zk_hosts = '10.0.0.13:2181'  # Use your actual Zookeeper host IP
+zk_hosts = '172.16.57.246:2181'  # Use your actual Zookeeper host IP
 zk = KazooClient(hosts=zk_hosts)
 zk.start()
 
@@ -131,7 +131,6 @@ def treasure_found():
     user_data = json.loads(zk.get(user_path)[0].decode())
     user_data['timestampClue'] = int(time.time())
     user_data['roundCounter'] += 1
-    isLeader = user_data['isLeader']
     # app.logger.info(f"User {username} found the treasure at {user_data['timestampClue']}\n\n\n")
     # user_data['isRoundOver'] = True
     # user_data['isReady'] = False
@@ -162,7 +161,7 @@ def get_scores():
     #     'user2': 900,
     #     'user3': 800,
     # }
-    time.sleep(2)
+    time.sleep(5)
     children = zk.get_children(lobby_path)
     scores = {}
     for child in children:
@@ -205,24 +204,28 @@ def watch_children(data, stat, event):
 
 @zk.ChildrenWatch(lobby_path)
 def ensure_leader_exists(children):
-    app.logger.info(f"Lobby users have changed: {children}")
+    app.logger.info(f"Lobby users have changed: {children}\n\n")
 
-    if not children:
-        return  # No children, no action needed
-    leader_exists = any(json.loads(zk.get(f"{lobby_path}/{child}")[0].decode())['isLeader'] for child in children)
-    if not leader_exists:
+    leader_count = 0
+
+    all_users_data = []
+
+    for child in children:
+        data, _ = zk.get(f"{lobby_path}/{child}")
+        user_data = json.loads(data.decode())
+        all_users_data.append(user_data)
+        if user_data['isLeader']:
+            leader_count += 1
+    
+    if leader_count ==0 and len(children) > 0:
         # Choose new leader, e.g., the first child or based on some criteria
-        json_data = []
-        for child in children:
-            data, _ = zk.get(f"{lobby_path}/{child}")
-            json_data.append(json.loads(data.decode()))
-        #check for the user with the highest score and make him the leader 
-        new_leader = max(json_data, key=lambda x: x['score'])
-        data, _ = zk.get(f"{lobby_path}/{new_leader['username']}")
-        new_data = json.loads(data.decode())
-        new_data['isLeader'] = True
-        zk.set(f"{lobby_path}/{new_leader}", json.dumps(new_data).encode())
-        app.logger.info(f"New leader assigned: {new_leader}")
+        new_leader = max(all_users_data, key=lambda x: x['score'])
+        # data, _ = zk.get(f"{lobby_path}/{new_leader['username']}")
+        # new_data = json.loads(data.decode())
+        # new_data['isLeader'] = True
+        new_leader['isLeader'] = True
+        zk.set(f"{lobby_path}/{new_leader['username']}", json.dumps(new_leader).encode())
+        app.logger.info(f"New leader assigned: {new_leader}\n\n\n\n")
 
 def compute_scores():
     #TODO change the leader after every round

@@ -1,0 +1,7 @@
+Name, Memory_Usage, Network_Input, Network_Output, CPU_Usage
+game1, 24.51MiB, 17.3kB, 12.7kB, 0.61%
+game2, 26.5MiB, 17.6kB, 12.7kB, 0.18%
+game3, 24.51MiB, 17.5kB, 12.7kB, 0.24%
+game4, 24.51MiB, 17.9kB, 12.8kB, 0.23%
+game5, 24.5MiB, 17.4kB, 12.5kB, 0.18%
+zookeeper-server, 180.5MiB, 879kB, 1.31MB, 0.88%
