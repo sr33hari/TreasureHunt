@@ -1,8 +1,8 @@
 window.onload = function () {
     fetchScores();
     //ensure the function is called every 10 seconds
-    setInterval(fetchScores, 10000);
-    setTimeout(removeUsers, 15000);
+    setInterval(fetchScores, 1000);
+    setTimeout(removeUsers, 18000);
 }
 
 function fetchScores() {
